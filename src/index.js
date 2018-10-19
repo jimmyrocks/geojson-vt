@@ -75,10 +75,18 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
             tile = this.tiles[id];
 
         if (!tile) {
+          tile = createTile(features, z, x, y, options);
             if (debug > 1) console.time('creation');
-
-            tile = this.tiles[id] = createTile(features, z, x, y, options);
-            this.tileCoords.push({z: z, x: x, y: y});
+            if (options.stream) {
+              if (tile.features.length) {
+                options.stream.push(JSON.stringify(tile));
+                options.stream.read();
+              };
+              tile = {};
+            } else {
+              this.tiles[id] = tile;
+              this.tileCoords.push({z: z, x: x, y: y});
+            }
 
             if (debug) {
                 if (debug > 1) {
@@ -149,6 +157,13 @@ GeoJSONVT.prototype.splitTile = function (features, z, x, y, cz, cx, cy) {
         stack.push(tr || [], z + 1, x * 2 + 1, y * 2);
         stack.push(br || [], z + 1, x * 2 + 1, y * 2 + 1);
     }
+
+  // End stream
+  if (options.stream) {
+    options.stream.push(null);
+  }
+  // var used = process.memoryUsage().heapUsed / 1024 / 1024;
+  // console.log('done?', Math.round(used*100) / 100, 'MB');
 };
 
 GeoJSONVT.prototype.getTile = function (z, x, y) {
